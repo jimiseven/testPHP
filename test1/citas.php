@@ -237,9 +237,7 @@ if (isset($_GET['success'])) {
 
 <script>
 function deleteCita(id) {
-    // Usamos la función confirm() nativa del navegador.
-    // Si tienes una función personalizada como 'confirmDelete' (ej. con SweetAlert), asegúrate de que esté definida.
-    if (confirm('¿Está seguro de que desea eliminar esta cita? Esta acción no se puede deshacer.')) {
+    if (confirmDelete('¿Está seguro de que desea eliminar esta cita? Esta acción no se puede deshacer.')) {
         document.getElementById('deleteId').value = id;
         document.getElementById('deleteForm').submit();
     }

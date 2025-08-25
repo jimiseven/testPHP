@@ -1,77 +1,101 @@
 <?php
+require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/Infante.php';
 require_once __DIR__ . '/../models/Responsable.php';
-require_once __DIR__ . '/../config/database.php';
 
 class InfanteController {
-    private $infante;
-    private $responsable;
-    private $database;
+    private $db;
+    private $infanteModel;
 
     public function __construct() {
-        $this->database = new Database();
-        $this->infante = new Infante($this->database->getConnection());
-        $this->responsable = new Responsable($this->database->getConnection());
+        $database = new Database();
+        $this->db = $database->getConnection();
+        $this->infanteModel = new Infante($this->db);
     }
 
+    // Obtiene todos los infantes para la vista principal
     public function index() {
-        $stmt = $this->infante->read();
-        $infantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return $infantes;
-    }
-
-    public function show($id) {
-        $this->infante->id = $id;
-        $infante = $this->infante->readOne();
-        if($infante) {
-            return $infante;
-        }
-        return false;
-    }
-
-    public function store($data) {
-        $this->infante->nombre = $data['nombre'];
-        $this->infante->apellido = $data['apellido'];
-        $this->infante->fecha_nacimiento = $data['fecha_nacimiento'];
-        $this->infante->responsable_id = $data['responsable_id'];
-
-        if($this->infante->create()) {
-            return ['success' => true, 'message' => 'Infante creado exitosamente'];
-        }
-        return ['success' => false, 'message' => 'Error al crear el infante'];
-    }
-
-    public function update($id, $data) {
-        $this->infante->id = $id;
-        $this->infante->nombre = $data['nombre'];
-        $this->infante->apellido = $data['apellido'];
-        $this->infante->fecha_nacimiento = $data['fecha_nacimiento'];
-        $this->infante->responsable_id = $data['responsable_id'];
-
-        if($this->infante->update()) {
-            return ['success' => true, 'message' => 'Infante actualizado exitosamente'];
-        }
-        return ['success' => false, 'message' => 'Error al actualizar el infante'];
-    }
-
-    public function delete($id) {
-        $this->infante->id = $id;
-        if($this->infante->delete()) {
-            return ['success' => true, 'message' => 'Infante eliminado exitosamente'];
-        }
-        return ['success' => false, 'message' => 'Error al eliminar el infante'];
-    }
-
-    public function getResponsables() {
-        $stmt = $this->responsable->read();
+        $stmt = $this->infanteModel->read();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    // Obtiene un infante para el formulario de edición
+    public function show($id) {
+        $this->infanteModel->id = $id;
+        $this->infanteModel->readOne();
+        return [
+            'id' => $this->infanteModel->id,
+            'nombre' => $this->infanteModel->nombre,
+            'apellido' => $this->infanteModel->apellido,
+            'fecha_nacimiento' => $this->infanteModel->fecha_nacimiento,
+            'responsable_id' => $this->infanteModel->responsable_id,
+        ];
+    }
+
+    // Guarda un nuevo infante
+    public function store($data) {
+        if (empty($data['nombre']) || empty($data['apellido']) || empty($data['fecha_nacimiento']) || empty($data['responsable_id'])) {
+            return ['success' => false, 'message' => 'Todos los campos son obligatorios.'];
+        }
+
+        $this->infanteModel->nombre = $data['nombre'];
+        $this->infanteModel->apellido = $data['apellido'];
+        $this->infanteModel->fecha_nacimiento = $data['fecha_nacimiento'];
+        $this->infanteModel->responsable_id = $data['responsable_id'];
+
+        if ($this->infanteModel->create()) {
+            return ['success' => true, 'message' => 'Infante creado exitosamente.'];
+        }
+        return ['success' => false, 'message' => 'No se pudo crear el infante.'];
+    }
+    
+    // Actualiza un infante existente
+    public function update($id, $data) {
+        if (empty($data['nombre']) || empty($data['apellido']) || empty($data['fecha_nacimiento']) || empty($data['responsable_id'])) {
+            return ['success' => false, 'message' => 'Todos los campos son obligatorios.'];
+        }
+
+        $this->infanteModel->id = $id;
+        $this->infanteModel->nombre = $data['nombre'];
+        $this->infanteModel->apellido = $data['apellido'];
+        $this->infanteModel->fecha_nacimiento = $data['fecha_nacimiento'];
+        $this->infanteModel->responsable_id = $data['responsable_id'];
+
+        if ($this->infanteModel->update()) {
+            return ['success' => true, 'message' => 'Infante actualizado exitosamente.'];
+        }
+        return ['success' => false, 'message' => 'No se pudo actualizar el infante.'];
+    }
+
+    // Elimina un infante
+    public function delete($id) {
+        $this->infanteModel->id = $id;
+        if ($this->infanteModel->delete()) {
+            return ['success' => true, 'message' => 'Infante eliminado exitosamente.'];
+        }
+        return ['success' => false, 'message' => 'No se pudo eliminar el infante.'];
+    }
+
+    // --- Métodos auxiliares para los formularios ---
+
+    // Obtiene todos los responsables para el dropdown
+    public function getResponsables() {
+        $responsableModel = new Responsable($this->db);
+        $stmt = $responsableModel->readAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Calcula la edad a partir de la fecha de nacimiento
     public function calcularEdad($fecha_nacimiento) {
-        $fecha_nac = new DateTime($fecha_nacimiento);
-        $hoy = new DateTime();
-        $edad = $hoy->diff($fecha_nac);
-        return $edad->y;
+        if (!$fecha_nacimiento) return '?';
+        try {
+            $hoy = new DateTime();
+            $nacimiento = new DateTime($fecha_nacimiento);
+            $edad = $hoy->diff($nacimiento);
+            return $edad->y;
+        } catch (Exception $e) {
+            return '?';
+        }
     }
 }
 ?>

@@ -1,5 +1,8 @@
 <?php
 require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../models/Cita.php'; // Incluir el nuevo modelo
+require_once __DIR__ . '/../models/Infante.php';
+require_once __DIR__ . '/../models/Vacuna.php';
 
 class CitaController {
     private $db;
@@ -11,28 +14,18 @@ class CitaController {
 
     // Obtiene todas las citas con información relacionada para la vista principal
     public function index() {
-        $sql = "SELECT 
-                    c.id, c.fecha_inyeccion,
-                    i.nombre as infante_nombre, i.apellido as infante_apellido,
-                    v.nombre as vacuna_nombre, v.empresa as vacuna_empresa,
-                    r.nombre as responsable_nombre, r.apellido as responsable_apellido
-                FROM cita c
-                JOIN infantes i ON c.infante_id = i.id
-                JOIN vacuna v ON c.vacuna_id = v.id
-                JOIN responsable r ON i.responsable_id = r.id
-                ORDER BY c.fecha_inyeccion DESC";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchAll();
+        $citaModel = new Cita($this->db);
+        $stmt = $citaModel->read();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Obtiene una cita específica para la edición
     public function show($id) {
-        $stmt = $this->db->prepare("SELECT * FROM cita WHERE id = :id");
-        $stmt->bindParam(':id', $id);
-        $stmt->execute();
-        return $stmt->fetch();
+        $citaModel = new Cita($this->db);
+        $citaModel->id = $id;
+        $citaModel->readOne(); // El método readOne carga los datos en las propiedades del objeto
+        // Devolvemos un array para mantener la compatibilidad con la vista
+        return ['id' => $citaModel->id, 'infante_id' => $citaModel->infante_id, 'vacuna_id' => $citaModel->vacuna_id, 'fecha_inyeccion' => $citaModel->fecha_inyeccion];
     }
 
     // Guarda una nueva cita
@@ -43,17 +36,17 @@ class CitaController {
         }
 
         try {
-            $sql = "INSERT INTO cita (infante_id, vacuna_id, fecha_inyeccion) VALUES (:infante_id, :vacuna_id, :fecha_inyeccion)";
-            $stmt = $this->db->prepare($sql);
-            
-            $stmt->bindParam(':infante_id', $data['infante_id']);
-            $stmt->bindParam(':vacuna_id', $data['vacuna_id']);
-            $stmt->bindParam(':fecha_inyeccion', $data['fecha_inyeccion']);
-            
-            if ($stmt->execute()) {
+            $citaModel = new Cita($this->db);
+
+            // Asignar valores al objeto del modelo
+            $citaModel->infante_id = $data['infante_id'];
+            $citaModel->vacuna_id = $data['vacuna_id'];
+            $citaModel->fecha_inyeccion = $data['fecha_inyeccion'];
+
+            if ($citaModel->create()) {
                 return ['success' => true, 'message' => 'Cita creada exitosamente.'];
             } else {
-                return ['success' => false, 'message' => 'Error al crear la cita.'];
+                return ['success' => false, 'message' => 'No se pudo crear la cita.'];
             }
         } catch (PDOException $e) {
             return ['success' => false, 'message' => 'Error de base de datos: ' . $e->getMessage()];
@@ -68,18 +61,17 @@ class CitaController {
         }
 
         try {
-            $sql = "UPDATE cita SET infante_id = :infante_id, vacuna_id = :vacuna_id, fecha_inyeccion = :fecha_inyeccion WHERE id = :id";
-            $stmt = $this->db->prepare($sql);
+            $citaModel = new Cita($this->db);
 
-            $stmt->bindParam(':infante_id', $data['infante_id']);
-            $stmt->bindParam(':vacuna_id', $data['vacuna_id']);
-            $stmt->bindParam(':fecha_inyeccion', $data['fecha_inyeccion']);
-            $stmt->bindParam(':id', $id);
+            $citaModel->id = $id;
+            $citaModel->infante_id = $data['infante_id'];
+            $citaModel->vacuna_id = $data['vacuna_id'];
+            $citaModel->fecha_inyeccion = $data['fecha_inyeccion'];
 
-            if ($stmt->execute()) {
+            if ($citaModel->update()) {
                 return ['success' => true, 'message' => 'Cita actualizada exitosamente.'];
             } else {
-                return ['success' => false, 'message' => 'Error al actualizar la cita.'];
+                return ['success' => false, 'message' => 'No se pudo actualizar la cita.'];
             }
         } catch (PDOException $e) {
             return ['success' => false, 'message' => 'Error de base de datos: ' . $e->getMessage()];
@@ -89,13 +81,13 @@ class CitaController {
     // Elimina una cita
     public function delete($id) {
         try {
-            $stmt = $this->db->prepare("DELETE FROM cita WHERE id = :id");
-            $stmt->bindParam(':id', $id);
-            
-            if ($stmt->execute()) {
+            $citaModel = new Cita($this->db);
+            $citaModel->id = $id;
+
+            if ($citaModel->delete()) {
                 return ['success' => true, 'message' => 'Cita eliminada exitosamente.'];
             } else {
-                return ['success' => false, 'message' => 'Error al eliminar la cita.'];
+                return ['success' => false, 'message' => 'No se pudo eliminar la cita.'];
             }
         } catch (PDOException $e) {
             return ['success' => false, 'message' => 'Error de base de datos: ' . $e->getMessage()];
@@ -106,16 +98,16 @@ class CitaController {
 
     // Obtiene todos los infantes para el dropdown
     public function getInfantes() {
-        $stmt = $this->db->prepare("SELECT id, nombre, apellido, fecha_nacimiento FROM infantes ORDER BY apellido, nombre");
-        $stmt->execute();
-        return $stmt->fetchAll();
+        $infanteModel = new Infante($this->db);
+        $stmt = $infanteModel->readAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Obtiene todas las vacunas para el dropdown
     public function getVacunas() {
-        $stmt = $this->db->prepare("SELECT id, nombre, empresa FROM vacuna ORDER BY nombre");
-        $stmt->execute();
-        return $stmt->fetchAll();
+        $vacunaModel = new Vacuna($this->db);
+        $stmt = $vacunaModel->readAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // Calcula la edad a partir de la fecha de nacimiento

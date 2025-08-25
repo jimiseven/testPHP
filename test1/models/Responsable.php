@@ -1,10 +1,9 @@
 <?php
-require_once __DIR__ . '/../config/database.php';
-
 class Responsable {
     private $conn;
     private $table_name = "responsable";
 
+    // Propiedades del Objeto
     public $id;
     public $nombre;
     public $apellido;
@@ -18,6 +17,14 @@ class Responsable {
     // Obtener todos los responsables
     public function read() {
         $query = "SELECT * FROM " . $this->table_name . " ORDER BY apellido, nombre";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt;
+    }
+
+    // Obtener todos los responsables para dropdowns
+    public function readAll() {
+        $query = "SELECT id, nombre, apellido, carnet FROM " . $this->table_name . " ORDER BY apellido, nombre";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt;
@@ -56,10 +63,7 @@ class Responsable {
         $stmt->bindParam(":carnet", $this->carnet);
         $stmt->bindParam(":celular", $this->celular);
 
-        if($stmt->execute()) {
-            return true;
-        }
-        return false;
+        return $stmt->execute();
     }
 
     // Actualizar responsable
@@ -79,10 +83,7 @@ class Responsable {
         $stmt->bindParam(":celular", $this->celular);
         $stmt->bindParam(":id", $this->id);
 
-        if($stmt->execute()) {
-            return true;
-        }
-        return false;
+        return $stmt->execute();
     }
 
     // Eliminar responsable
@@ -91,11 +92,7 @@ class Responsable {
         $stmt = $this->conn->prepare($query);
         $this->id = htmlspecialchars(strip_tags($this->id));
         $stmt->bindParam(1, $this->id);
-
-        if($stmt->execute()) {
-            return true;
-        }
-        return false;
+        return $stmt->execute();
     }
 }
 ?>

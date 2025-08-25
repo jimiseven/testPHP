@@ -29,6 +29,11 @@ class Cita {
         return $stmt;
     }
 
+    // Alias para read() - para mantener consistencia
+    public function readAll() {
+        return $this->read();
+    }
+
     // Obtener una cita por ID
     public function readOne() {
         $query = "SELECT c.*, i.nombre as infante_nombre, i.apellido as infante_apellido, 

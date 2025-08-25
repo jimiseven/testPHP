@@ -1,10 +1,9 @@
 <?php
-require_once __DIR__ . '/../config/database.php';
-
 class Vacuna {
     private $conn;
     private $table_name = "vacuna";
 
+    // Propiedades del Objeto
     public $id;
     public $nombre;
     public $empresa;
@@ -16,6 +15,14 @@ class Vacuna {
     // Obtener todas las vacunas
     public function read() {
         $query = "SELECT * FROM " . $this->table_name . " ORDER BY nombre";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return $stmt;
+    }
+
+    // Obtener todas las vacunas para los menús desplegables
+    public function readAll() {
+        $query = "SELECT id, nombre, empresa FROM " . $this->table_name . " ORDER BY nombre";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         return $stmt;
@@ -48,10 +55,7 @@ class Vacuna {
         $stmt->bindParam(":nombre", $this->nombre);
         $stmt->bindParam(":empresa", $this->empresa);
 
-        if($stmt->execute()) {
-            return true;
-        }
-        return false;
+        return $stmt->execute();
     }
 
     // Actualizar vacuna
@@ -67,10 +71,7 @@ class Vacuna {
         $stmt->bindParam(":empresa", $this->empresa);
         $stmt->bindParam(":id", $this->id);
 
-        if($stmt->execute()) {
-            return true;
-        }
-        return false;
+        return $stmt->execute();
     }
 
     // Eliminar vacuna
@@ -79,11 +80,7 @@ class Vacuna {
         $stmt = $this->conn->prepare($query);
         $this->id = htmlspecialchars(strip_tags($this->id));
         $stmt->bindParam(1, $this->id);
-
-        if($stmt->execute()) {
-            return true;
-        }
-        return false;
+        return $stmt->execute();
     }
 }
 ?>
